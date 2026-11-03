@@ -32,7 +32,6 @@ docker run --rm --platform linux/arm64 \
 		cp -r "/work/packages/$p" "/home/builder/build/$p"
 		chown -R builder:builder "/home/builder/build/$p"
 		su builder -c "cd /home/builder/build/$p && PKGDEST=/work/dist makepkg -d --noconfirm --cleanbuild"
-		# Later packages build against the earlier ones (pikvm-pico needs none at build time).
 	done
 '
 
