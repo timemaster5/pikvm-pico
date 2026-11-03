@@ -1,0 +1,13 @@
+
+# pikvm-pico: Pico SPI keyboard/mouse and USB storage, no ATX wiring.
+kvmd:
+    hid:
+        type: pico_spi
+    msd:
+        type: pico_msd
+        images_dir: /var/lib/kvmd/data/images
+    atx:
+        type: disabled
+
+picostorage:
+    images_dir: /var/lib/kvmd/data/images

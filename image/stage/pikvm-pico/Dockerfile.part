@@ -1,0 +1,48 @@
+# pi-builder stage, runs after the pikvm stage of pikvm/os. PLATFORM and BOARD come from the
+# pikvm stage (ARG/ENV) and are reused here.
+ARG PIKVM_PICO_REPO_URL=https://github.com/timemaster5/pikvm-pico/releases/download/repo
+ARG PIKVM_PICO_FPR=ABACF78B0CED70F1C1BDF80A526D5E07A31B4AF7
+
+COPY stages/pikvm-pico/pikvm-pico.asc /tmp/pikvm-pico.asc
+
+# Signing key: imported into the pacman keyring and locally signed. The build fails if the
+# imported file does not hold the expected fingerprint.
+RUN pacman-key --add /tmp/pikvm-pico.asc \
+	&& pacman-key --list-keys "$PIKVM_PICO_FPR" > /dev/null \
+	&& pacman-key --lsign-key "$PIKVM_PICO_FPR" \
+	&& rm -f /tmp/pikvm-pico.asc
+
+# The repository goes above [pikvm]: the first repository that has a package wins.
+RUN awk -v url="$PIKVM_PICO_REPO_URL" ' \
+		/^\[pikvm\]/ && !done { print "[pikvm-pico]"; print "Server = " url; print "SigLevel = Required DatabaseRequired TrustedOnly"; print ""; done = 1 } \
+		{ print } \
+		END { if (!done) exit 1 }' /etc/pacman.conf > /etc/pacman.conf.new \
+	&& cat /etc/pacman.conf.new > /etc/pacman.conf \
+	&& rm -f /etc/pacman.conf.new
+
+# No --ask=4: a package conflict (Arch openocd) must stop the build, not be resolved silently.
+RUN pacman --noconfirm -Syu \
+	&& pacman --noconfirm --needed -S kvmd kvmd-platform-$PLATFORM-$BOARD pikvm-pico openocd-bcm2835 \
+	&& (! pacman -Qq | grep -qx openocd) \
+	&& rm -rf /var/cache/pacman/pkg/*
+
+# Installing kvmd regenerates the web and VNC certificates (the pikvm stage deleted them);
+# the first boot makes new ones. Leftover .pacnew files hold only the package defaults.
+RUN rm -f /etc/kvmd/nginx/ssl/* /etc/kvmd/vnc/ssl/* \
+	&& find /etc/kvmd -name '*.pacnew' -delete
+
+# Per-site configuration: no package ships it.
+COPY stages/pikvm-pico/override.yaml /tmp/pikvm-pico-override.yaml
+RUN cat /tmp/pikvm-pico-override.yaml >> /etc/kvmd/override.yaml \
+	&& rm -f /tmp/pikvm-pico-override.yaml
+
+# PIDATA holds the images served by the Pico; the root file system is read-only.
+RUN install -d -o kvmd -g kvmd -m 0755 /var/lib/kvmd/data /var/lib/kvmd/data/images \
+	&& echo "LABEL=PIDATA  /var/lib/kvmd/data  ext4  rw,noatime,nodev,nosuid,noexec  0 2" >> /etc/fstab
+
+RUN systemctl enable kvmd-pico-storage
+
+# The 64-bit kernel is chosen explicitly on the Raspberry Pi 3.
+RUN test -e /boot/kernel8.img \
+	&& test -e /boot/bcm2710-rpi-3-b-plus.dtb \
+	&& printf '\n[all]\narm_64bit=1\nkernel=kernel8.img\n' >> /boot/config.txt

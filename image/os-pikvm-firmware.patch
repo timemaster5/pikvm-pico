@@ -1,0 +1,12 @@
+diff --git a/stages/arch/pikvm/Dockerfile.part b/stages/arch/pikvm/Dockerfile.part
+index cedc67e..afb3a10 100644
+--- a/stages/arch/pikvm/Dockerfile.part
++++ b/stages/arch/pikvm/Dockerfile.part
+@@ -13,6 +13,7 @@ ENV FAN=$FAN
+ RUN echo $PLATFORM $VERSIONS
+ 
+ RUN pacman --noconfirm --ask=4 -Syu \
++	&& pacman --noconfirm -Rdd linux-firmware-ti linux-firmware-amd \
+ 	&& pacman --noconfirm --ask=4 -S pikvm-os-raspberrypi \
+ 	&& pacman --noconfirm --ask=4 -R \
+ 		linux-firmware-amdgpu \

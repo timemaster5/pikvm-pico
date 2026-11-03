@@ -2,3 +2,4 @@ dist/
 *.pkg.tar.*
 src/
 pkg/
+build/

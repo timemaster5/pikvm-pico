@@ -84,6 +84,24 @@ As root on the PiKVM, with the system writable (`rw`; `ro` afterwards):
 
 5. Configure (below), flash the Pico (below), then `systemctl enable --now kvmd-pico-storage` and `systemctl restart kvmd`.
 
+## Ready-made SD image
+
+`tools/build-image.sh` builds a flashable image for the PiKVM v1 on a Raspberry Pi 3 (HDMI, aarch64) from the stock [pikvm/os](https://github.com/pikvm/os) builder. The only addition is a build stage (`image/stage/pikvm-pico/`) that does what the install section above does by hand: it imports the signing key, adds `[pikvm-pico]` above `[pikvm]`, installs `kvmd`, `kvmd-platform-v1-hdmi-rpi3`, `pikvm-pico` and `openocd-bcm2835` from the repository, writes the site configuration below, and enables `kvmd-pico-storage`. No file is copied into the image outside of packages except that configuration.
+
+- Layout (6.5 GiB, fits an 8 GB card): `PIBOOT` 256 MiB, `PIPST` 256 MiB, `PIROOT` 4 GiB (read-only as in stock PiKVM), `PIDATA` 2 GiB mounted at `/var/lib/kvmd/data` (read-write, holds the images served by the Pico).
+- `/etc/kvmd/override.yaml` gets `hid: pico_spi`, `msd: pico_msd` with `images_dir: /var/lib/kvmd/data/images`, `atx: disabled` and `picostorage.images_dir`. This is per-site: edit `image/stage/pikvm-pico/override.yaml` before building if your wiring differs.
+- Stock PiKVM defaults apply: hostname `pikvm`, DHCP, `root`/`root`, web `admin`/`admin`. No WiFi, no secrets. SSH host keys, machine id and the web certificate are generated on the first boot. Change the passwords right away (`rw`, `passwd`, `kvmd-htpasswd set admin`, `ro`).
+- Build (aarch64 Docker host; on an Apple Silicon Mac inside the Colima VM, with `WORK_DIR` on the VM disk): `tools/build-image.sh`, result `dist/image/v1-hdmi-rpi3-aarch64-pico-<date>.img.xz` and its `.sha256`.
+
+Burn it: check the sum, then write the decompressed image to the card (replace `diskN`; `lsblk` on Linux):
+
+```
+shasum -a 256 -c v1-hdmi-rpi3-aarch64-pico-<date>.img.xz.sha256
+xz -dc v1-hdmi-rpi3-aarch64-pico-<date>.img.xz | sudo dd of=/dev/rdiskN bs=4m
+```
+
+Put the card in the Pi, wait for the first boot to finish (it reboots once), and open `https://pikvm/`. Updates later are the normal `pikvm-update`; our packages come from the repository because it is above `[pikvm]`. Flash the Pico as described below.
+
 ## Configuration
 
 `/etc/kvmd/override.yaml`:
