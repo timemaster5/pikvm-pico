@@ -1,9 +1,8 @@
-# The Pico firmware is built from source here and not shipped as a prebuilt release asset:
-# the package then carries the exact firmware of the kvmd tag it is built from, reproducible by
-# anyone, and the signed package is the only thing a user has to trust. hid/pico/Makefile pins
-# pico-sdk, TinyUSB and ps2x2pico by commit, so the build needs network access (makepkg
-# normally has it). If no arm-none-eabi toolchain exists for aarch64 in the Arch Linux ARM
-# repositories, build hid.uf2/hid.elf elsewhere and replace build() by copying them.
+# hid.uf2 is built by tools/build-firmware.sh (Debian arm64 container: Arch Linux ARM has no
+# arm-none-eabi toolchain for aarch64) from the kvmd fork tag v$_kvmdver-pico1 and published as
+# the asset of the GitHub release fw-v$_kvmdver-pico1. makepkg uses a file of the same name in
+# the PKGBUILD directory instead of downloading, which is how tools/build-packages.sh builds
+# offline: it copies dist/hid.uf2 next to the PKGBUILD.
 
 pkgname=pikvm-pico
 pkgver=0.1.0
@@ -15,23 +14,17 @@ arch=(any)
 url='https://github.com/timemaster5/pikvm-pico'
 license=(GPL-3.0-or-later)
 depends=("kvmd>=$_kvmdver-101" openocd-bcm2835)
-makedepends=(git cmake arm-none-eabi-gcc arm-none-eabi-newlib)
 source=(
-	"kvmd::git+https://github.com/timemaster5/kvmd.git#tag=$_picotag"
+	"hid.uf2::https://github.com/timemaster5/pikvm-pico/releases/download/fw-$_picotag/hid.uf2"
 	pikvm-pico-flash
 	pico-swd.cfg
 )
-sha256sums=(SKIP
+sha256sums=(d219b244d92bb10558b4563bc1f83a86dc51a00da34b8f67bf22ee631eb6ba6d
 	92783cb5c88c792729ca4820f8b74b4371b581b9de243abd13eb80cc4946560c
 	2cd82bdde47fb4e1743a9e32bda9c881a5fb93c441d286b5dbe6693b67332600)
-
-build() {
-	make -C kvmd/hid/pico
-}
 
 package() {
 	install -Dm755 pikvm-pico-flash "$pkgdir/usr/bin/pikvm-pico-flash"
 	install -Dm644 pico-swd.cfg "$pkgdir/usr/share/pikvm-pico/pico-swd.cfg"
-	install -Dm644 kvmd/hid/pico/.build/src/hid.uf2 "$pkgdir/usr/share/pikvm-pico/hid.uf2"
-	install -Dm644 kvmd/hid/pico/.build/src/hid.elf "$pkgdir/usr/share/pikvm-pico/hid.elf"
+	install -Dm644 hid.uf2 "$pkgdir/usr/share/pikvm-pico/hid.uf2"
 }

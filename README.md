@@ -136,10 +136,13 @@ Our `kvmd` is the upstream release plus the fork branch, rebuilt for each upstre
 ## Building
 
 ```
-tools/build-packages.sh           # aarch64 Arch Linux ARM container, packages into dist/
+tools/build-firmware.sh           # Debian arm64 container: hid.uf2, hid.elf, hid.uf2.sha256 into dist/
+tools/build-packages.sh           # aarch64 Arch Linux ARM container, packages into dist/ (needs dist/hid.uf2)
 PIKVM_PICO_GPG_KEY=<key id> tools/publish-repo.sh   # sign, make the database in dist/
 tools/check-identity.sh           # before every push
 ```
+
+The firmware is built separately because Arch Linux ARM has no arm-none-eabi toolchain for aarch64. `pikvm-pico` takes `hid.uf2` as the asset of the GitHub release `fw-v<kvmd version>-pico1` (checksum pinned in its PKGBUILD); locally `build-packages.sh` places `dist/hid.uf2` next to the PKGBUILD so makepkg needs no download. Publish `hid.uf2` to that release before a clean build elsewhere.
 
 `dist/` is uploaded as assets of the GitHub Release tagged `repo`. The signing key is never part of this repository.
 

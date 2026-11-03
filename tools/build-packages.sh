@@ -10,6 +10,9 @@ image=${ARCH_IMAGE:-menci/archlinuxarm:latest}
 packages=(openocd-bcm2835 kvmd pikvm-pico)
 
 mkdir -p "$root/dist"
+# pikvm-pico takes hid.uf2 as a prebuilt source; makepkg uses a local copy instead of the
+# release URL. Run tools/build-firmware.sh first.
+[ -f "$root/dist/hid.uf2" ] || { echo "dist/hid.uf2 missing: run tools/build-firmware.sh" >&2; exit 1; }
 
 # makepkg refuses root, so the build runs as an unprivileged "builder" user.
 # -d: runtime depends come from the [pikvm] repository, which the container does not have;
@@ -26,13 +29,13 @@ docker run --rm --platform linux/arm64 \
 	pacman-key --populate archlinuxarm
 	pacman -Syu --noconfirm --needed base-devel git cmake sudo \
 		python-build python-installer python-wheel python-setuptools \
-		arm-none-eabi-gcc arm-none-eabi-newlib \
 		hidapi jimtcl libjaylink libusb libftdi-compat capstone
 	useradd -m builder
 	install -d -o builder -g builder /build
 	chown builder:builder /work/dist
 	for p in $PACKAGES; do
 		cp -r "/work/packages/$p" "/build/$p"
+		[ "$p" != pikvm-pico ] || cp /work/dist/hid.uf2 "/build/$p/hid.uf2"
 		chown -R builder:builder "/build/$p"
 		su builder -c "cd /build/$p && PKGDEST=/work/dist makepkg -d --noconfirm --cleanbuild"
 	done
