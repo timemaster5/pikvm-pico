@@ -19,6 +19,9 @@ docker run --rm --platform linux/arm64 \
 	-v "$root/dist:/work/dist" \
 	-e "PACKAGES=${packages[*]}" \
 	"$image" bash -Eeuo pipefail -c '
+	# pacman 7 sandboxes downloads with Landlock, which containers usually do not allow.
+	sed -i "s/^#DisableSandbox/DisableSandbox/" /etc/pacman.conf
+	grep -q "^DisableSandbox" /etc/pacman.conf || sed -i "/^\[options\]/a DisableSandbox" /etc/pacman.conf
 	pacman-key --init
 	pacman-key --populate archlinuxarm
 	pacman -Syu --noconfirm --needed base-devel git cmake sudo \
