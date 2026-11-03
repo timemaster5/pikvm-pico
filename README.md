@@ -56,11 +56,11 @@ As root on the PiKVM, with the system writable (`rw`; `ro` afterwards):
    ...
    ```
 
-2. Import the signing key (fingerprint `TODO-FINGERPRINT`; the public key is the release asset `pikvm-pico.gpg`) and trust it:
+2. Import the signing key (fingerprint `ABACF78B0CED70F1C1BDF80A526D5E07A31B4AF7`; the public key is the release asset `pikvm-pico.gpg`) and trust it:
 
    ```
    curl -fL https://github.com/timemaster5/pikvm-pico/releases/download/repo/pikvm-pico.gpg | pacman-key --add -
-   pacman-key --lsign-key TODO-FINGERPRINT
+   pacman-key --lsign-key ABACF78B0CED70F1C1BDF80A526D5E07A31B4AF7
    ```
 
    Compare the fingerprint with the one published in this README before trusting it.
