@@ -16,7 +16,7 @@ name=pikvm-pico
 image=${ARCH_IMAGE:-menci/archlinuxarm:latest}
 
 shopt -s nullglob
-pkgs=("$dist"/*.pkg.tar.zst)
+pkgs=("$dist"/*.pkg.tar.zst "$dist"/*.pkg.tar.xz)
 if (( ${#pkgs[@]} == 0 )); then
 	echo "No packages in $dist, run tools/build-packages.sh first" >&2
 	exit 1
@@ -33,7 +33,7 @@ if command -v repo-add >/dev/null; then
 	repo-add --sign --key "$PIKVM_PICO_GPG_KEY" "$dist/$name.db.tar.gz" "${pkgs[@]}"
 else
 	docker run --rm --platform linux/arm64 -v "$dist:/dist" "$image" bash -Eeuo pipefail -c "
-		cd /dist && repo-add $name.db.tar.gz *.pkg.tar.zst"
+		cd /dist && repo-add $name.db.tar.gz *.pkg.tar.{zst,xz} 2>/dev/null || repo-add $name.db.tar.gz *.pkg.tar.xz"
 	gpg --batch --yes --local-user "$PIKVM_PICO_GPG_KEY" --detach-sign --output "$dist/$name.db.tar.gz.sig" "$dist/$name.db.tar.gz"
 fi
 
