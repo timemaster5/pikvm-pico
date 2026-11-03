@@ -26,12 +26,12 @@ docker run --rm --platform linux/arm64 \
 		arm-none-eabi-gcc arm-none-eabi-newlib \
 		hidapi jimtcl libjaylink libusb libftdi-compat capstone
 	useradd -m builder
-	install -d -o builder -g builder /home/builder/build
+	install -d -o builder -g builder /build
 	chown builder:builder /work/dist
 	for p in $PACKAGES; do
-		cp -r "/work/packages/$p" "/home/builder/build/$p"
-		chown -R builder:builder "/home/builder/build/$p"
-		su builder -c "cd /home/builder/build/$p && PKGDEST=/work/dist makepkg -d --noconfirm --cleanbuild"
+		cp -r "/work/packages/$p" "/build/$p"
+		chown -R builder:builder "/build/$p"
+		su builder -c "cd /build/$p && PKGDEST=/work/dist makepkg -d --noconfirm --cleanbuild"
 	done
 '
 
