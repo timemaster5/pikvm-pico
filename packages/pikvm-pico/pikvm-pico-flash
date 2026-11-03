@@ -1,0 +1,45 @@
+#!/bin/bash
+# Flash the Pico over SWD from the Raspberry Pi GPIO header (GPIO5 SWCLK, GPIO6 SWDIO).
+set -Eeuo pipefail
+
+share=/usr/share/pikvm-pico
+cfg=$share/pico-swd.cfg
+
+if [[ $EUID != 0 ]]; then
+	echo 'Run as root' >&2
+	exit 1
+fi
+
+if [[ ${1:-} == --probe && $# == 1 ]]; then
+	exec openocd -f "$cfg" -c 'init; targets; shutdown'
+fi
+
+elf=${1:-$share/hid.elf}
+if [[ $# -gt 1 || ! -f $elf || $elf != *.elf ]]; then
+	echo 'Usage: pikvm-pico-flash --probe | [firmware.elf]' >&2
+	echo "Without an argument the packaged firmware ($share/hid.elf) is flashed." >&2
+	exit 2
+fi
+
+# A fixed file name keeps user paths out of the OpenOCD command line.
+tmp=$(mktemp -d /run/pikvm-pico-flash.XXXXXX)
+stopped=()
+cleanup() {
+	rm -rf "$tmp"
+	for unit in "${stopped[@]}"; do
+		systemctl start "$unit"
+	done
+}
+trap cleanup EXIT
+
+cp -- "$elf" "$tmp/firmware.elf"
+
+# kvmd first: it depends on the broker. Restarted in reverse order.
+for unit in kvmd kvmd-pico-storage; do
+	if systemctl is-active --quiet "$unit"; then
+		systemctl stop "$unit"
+		stopped=("$unit" "${stopped[@]}")
+	fi
+done
+
+openocd -f "$cfg" -c "program $tmp/firmware.elf verify reset exit"

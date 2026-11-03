@@ -1,0 +1,48 @@
+# Based on the Arch Linux openocd PKGBUILD (0.12.0-6, Filipe Lains, Sergej Pupykin and others).
+# Arch and Arch Linux ARM configure OpenOCD without bcm2835gpio, the driver that bit-bangs SWD
+# on the Raspberry Pi header, so pikvm-pico-flash needs this build. Only that driver is enabled.
+#
+# No epoch here: a ":" in a file name is mangled by GitHub release assets. The epoch of
+# Arch's openocd is carried in provides instead.
+
+pkgname=openocd-bcm2835
+pkgver=0.12.0
+pkgrel=1
+pkgdesc='OpenOCD with the Raspberry Pi GPIO (bcm2835gpio) SWD driver, for flashing the Pico'
+arch=(aarch64)
+url='https://openocd.org'
+license=(GPL-2.0-or-later)
+depends=(glibc hidapi jimtcl libjaylink libusb libftdi-compat capstone)
+makedepends=(git)
+provides=("openocd=1:$pkgver")
+conflicts=(openocd)
+source=("openocd::git+https://github.com/openocd-org/openocd#tag=v$pkgver")
+sha256sums=(SKIP)
+
+prepare() {
+	cd openocd
+
+	# Same fixes as Arch applies on top of v0.12.0 for current jimtcl and gcc.
+	git cherry-pick --no-commit 95603fae18f81eebdafc5b318e70f9e2cdefab9e
+	git cherry-pick --no-commit 73390332d203f02aa5b9798a7550191d55650d97
+	git cherry-pick --no-commit 6834f022b96fb1c7f5829166578e01a0ac223cb0
+
+	# All submodules are unnecessary (system jimtcl and libjaylink).
+	./bootstrap nosubmodule
+}
+
+build() {
+	cd openocd
+	./configure \
+		--prefix=/usr \
+		--disable-werror \
+		--disable-internal-jimtcl \
+		--disable-internal-libjaylink \
+		--enable-bcm2835gpio
+	make
+}
+
+package() {
+	cd openocd
+	make DESTDIR="$pkgdir" install
+}

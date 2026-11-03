@@ -1,0 +1,37 @@
+# The Pico firmware is built from source here and not shipped as a prebuilt release asset:
+# the package then carries the exact firmware of the kvmd tag it is built from, reproducible by
+# anyone, and the signed package is the only thing a user has to trust. hid/pico/Makefile pins
+# pico-sdk, TinyUSB and ps2x2pico by commit, so the build needs network access (makepkg
+# normally has it). If no arm-none-eabi toolchain exists for aarch64 in the Arch Linux ARM
+# repositories, build hid.uf2/hid.elf elsewhere and replace build() by copying them.
+
+pkgname=pikvm-pico
+pkgver=0.1.0
+pkgrel=1
+_kvmdver=4.234
+_picotag=v$_kvmdver-pico1
+pkgdesc='Pico firmware (HID and USB storage over SPI) and SWD flashing tool for PiKVM'
+arch=(any)
+url='https://github.com/timemaster5/pikvm-pico'
+license=(GPL-3.0-or-later)
+depends=("kvmd>=$_kvmdver-101" openocd-bcm2835)
+makedepends=(git cmake arm-none-eabi-gcc arm-none-eabi-newlib)
+source=(
+	"kvmd::git+https://github.com/timemaster5/kvmd.git#tag=$_picotag"
+	pikvm-pico-flash
+	pico-swd.cfg
+)
+sha256sums=(SKIP
+	92783cb5c88c792729ca4820f8b74b4371b581b9de243abd13eb80cc4946560c
+	2cd82bdde47fb4e1743a9e32bda9c881a5fb93c441d286b5dbe6693b67332600)
+
+build() {
+	make -C kvmd/hid/pico
+}
+
+package() {
+	install -Dm755 pikvm-pico-flash "$pkgdir/usr/bin/pikvm-pico-flash"
+	install -Dm644 pico-swd.cfg "$pkgdir/usr/share/pikvm-pico/pico-swd.cfg"
+	install -Dm644 kvmd/hid/pico/.build/src/hid.uf2 "$pkgdir/usr/share/pikvm-pico/hid.uf2"
+	install -Dm644 kvmd/hid/pico/.build/src/hid.elf "$pkgdir/usr/share/pikvm-pico/hid.elf"
+}
